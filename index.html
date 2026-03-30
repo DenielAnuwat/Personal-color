@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Color — 4 Seasons Palette</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Montserrat:wght@300;400;500;600&family=Sarabun:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  min-height: 100vh;
+  transition: background 0.6s ease, color 0.6s ease;
+}
+
+/* ── Season Themes ── */
+body.spring  { --bg: #FBF7F0; --accent: #C49A45; --text: #3A2A1A; --muted: #8A7A6A; --tab-bg: #F0EAD6; --card-shadow: rgba(196,154,69,0.15); }
+body.summer  { --bg: #F4F2F8; --accent: #8878B8; --text: #2A2040; --muted: #7870A0; --tab-bg: #EAE5F5; --card-shadow: rgba(136,120,184,0.15); }
+body.autumn  { --bg: #F7F2EC; --accent: #8B5A2B; --text: #2E1A0E; --muted: #7A5A3A; --tab-bg: #EDE3D5; --card-shadow: rgba(139,90,43,0.15); }
+body.winter  { --bg: #F0F4F8; --accent: #2C4A8A; --text: #0D1B2E; --muted: #5A6A8A; --tab-bg: #E0E8F5; --card-shadow: rgba(44,74,138,0.15); }
+
+/* ── Nav ── */
+.season-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--accent);
+  padding: 0;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+}
+
+.season-btn {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px;
+  letter-spacing: 4px;
+  font-weight: 400;
+  text-transform: uppercase;
+  padding: 18px 32px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  white-space: nowrap;
+}
+
+.season-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%; right: 50%;
+  height: 2px;
+  background: var(--accent);
+  transition: all 0.3s ease;
+}
+
+.season-btn:hover { color: var(--text); }
+
+.season-btn.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.season-btn.active::after {
+  left: 0; right: 0;
+}
+
+/* Season icon dots */
+.season-btn span.dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  margin-bottom: 1px;
+}
+.btn-spring .dot { background: #C49A45; }
+.btn-summer .dot { background: #8878B8; }
+.btn-autumn .dot { background: #8B5A2B; }
+.btn-winter .dot { background: #2C4A8A; }
+
+/* ── Panels ── */
+.panel { display: none; }
+.panel.active { display: block; animation: fadeIn 0.5s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Page Layout ── */
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 56px 36px 80px;
+  background: var(--bg);
+  min-height: 100vh;
+  transition: background 0.6s ease;
+}
+
+/* ── Header ── */
+.header {
+  text-align: center;
+  margin-bottom: 52px;
+}
+
+.header-rule-top {
+  width: 1px; height: 44px;
+  background: var(--accent);
+  margin: 0 auto 20px;
+}
+
+.season-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 6px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 68px;
+  font-weight: 300;
+  letter-spacing: 14px;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.subtitle-en {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.subtitle-th {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--muted);
+}
+
+.header-rule-bot {
+  width: 36px; height: 1px;
+  background: var(--accent);
+  margin: 18px auto 0;
+}
+
+/* ── Section ── */
+.section { margin-bottom: 52px; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.sec-line {
+  flex: 1; height: 1px;
+  background: linear-gradient(to right, var(--accent), transparent);
+}
+.sec-line.rev { background: linear-gradient(to left, var(--accent), transparent); }
+
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.section-sub {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Grids ── */
+.basic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.accent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 18px;
+}
+
+/* ── Color Card ── */
+.color-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  transition: transform 0.25s ease;
+}
+
+.color-card:hover { transform: translateY(-3px); }
+
+.swatch {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 5px;
+  box-shadow: 0 4px 14px var(--card-shadow), 0 1px 3px rgba(0,0,0,0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.swatch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%);
+}
+
+.accent-grid .swatch { aspect-ratio: 16/9; }
+
+.color-name {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  margin-top: 52px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(128,128,128,0.15);
+}
+
+.footer-quote {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+.footer-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.footer-dots span {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.footer-dots span:nth-child(1), .footer-dots span:nth-child(3) { opacity: 0.35; }
+
+/* ── Decorative corners ── */
+.corner {
+  position: fixed;
+  width: 50px; height: 50px;
+  opacity: 0.12;
+  pointer-events: none;
+  transition: border-color 0.6s ease;
+}
+.corner-tl { top: 70px; left: 16px; border-top: 1px solid var(--accent); border-left: 1px solid var(--accent); }
+.corner-br { bottom: 16px; right: 16px; border-bottom: 1px solid var(--accent); border-right: 1px solid var(--accent); }
+
+/* ── Credit ── */
+.credit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 20px;
+}
+
+.credit-line-left, .credit-line-right {
+  width: 40px; height: 1px;
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+.credit-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.credit-text span {
+  color: var(--accent);
+  font-weight: 600;
+  font-style: italic;
+}
+
+/* ── Download Button ── */
+.dl-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dl-btn {
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dl-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.dl-btn:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.24); }
+.dl-btn:hover::before { opacity: 1; }
+.dl-btn:active { transform: scale(0.96); }
+
+.dl-btn svg {
+  width: 22px; height: 22px;
+  fill: #fff;
+  transition: transform 0.3s ease;
+}
+.dl-btn:hover svg { transform: translateY(2px); }
+
+.dl-label {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* Loading state */
+.dl-btn.loading svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .page { padding: 40px 20px 60px; }
+  .title { font-size: 50px; letter-spacing: 10px; }
+  .basic-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .accent-grid { grid-template-columns: repeat(3, 1fr); gap: 8px 10px; }
+  .season-btn { padding: 14px 16px; font-size: 11px; letter-spacing: 2px; }
+  .season-btn span.dot { display: none; }
+  .dl-fab { bottom: 18px; right: 18px; }
+  .dl-btn { width: 46px; height: 46px; }
+}
+</style>
+</head>
+<body class="spring">
+
+<div class="corner corner-tl"></div>
+<div class="corner corner-br"></div>
+
+<!-- Download FAB -->
+<div class="dl-fab">
+  <button class="dl-btn" id="dlBtn" onclick="downloadImage()" title="Download as image">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 4v-2h14v2H5z"/>
+    </svg>
+  </button>
+  <div class="dl-label">Save</div>
+</div>
+
+<!-- Navigation -->
+<nav class="season-nav">
+  <button class="season-btn btn-spring active" onclick="switchSeason('spring')">
+    <span class="dot"></span>Spring
+  </button>
+  <button class="season-btn btn-summer" onclick="switchSeason('summer')">
+    <span class="dot"></span>Summer
+  </button>
+  <button class="season-btn btn-autumn" onclick="switchSeason('autumn')">
+    <span class="dot"></span>Autumn
+  </button>
+  <button class="season-btn btn-winter" onclick="switchSeason('winter')">
+    <span class="dot"></span>Winter
+  </button>
+</nav>
+
+<!-- ════════════════ SPRING ════════════════ -->
+<div id="panel-spring" class="panel active">
+  <div class="page">
+    <header class="header">
+      <div class="header-rule-top"></div>
+      <div class="season-label">Personal Color Analysis</div>
+      <h1 class="title">SPRING</h1>
+      <div class="subtitle-en">Your Signature Palette</div>
+      <div class="subtitle-th">คู่มือสีประจำ Season ของคุณ</div>
+      <div class="header-rule-bot"></div>
+    </header>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Basic Colors</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีพื้นฐาน — เหมาะสำหรับไอเทมหลักในตู้เสื้อผ้า</div>
+      <div class="basic-grid">
+        <div class="color-card"><div class="swatch" style="background:#F5F0D0"></div><div class="color-name">Ivory</div></div>
+        <div class="color-card"><div class="swatch" style="background:#B8A85C"></div><div class="color-name">Honey Beige</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C49A45"></div><div class="color-name">Warm Beige</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C87830"></div><div class="color-name">Camel</div></div>
+        <div class="color-card"><div class="swatch" style="background:#7A2E20"></div><div class="color-name">Golden Brown</div></div>
+        <div class="color-card"><div class="swatch" style="background:#A8A898"></div><div class="color-name">Warm Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#EAD0BE"></div><div class="color-name">Pink Beige</div></div>
+        <div class="color-card"><div class="swatch" style="background:#3858A8"></div><div class="color-name">Light Navy</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Assort &amp; Accent</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีที่เข้ากันได้ดีและสีที่ทำให้โดดเด่น</div>
+      <div class="accent-grid">
+        <div class="color-card"><div class="swatch" style="background:#F5C5B0"></div><div class="color-name">Peach Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F0A060"></div><div class="color-name">Apricot</div></div>
+        <div class="color-card"><div class="swatch" style="background:#20A0C0"></div><div class="color-name">Plastic Turquoise</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F0A090"></div><div class="color-name">Light Salmon</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F08040"></div><div class="color-name">Light Orange</div></div>
+        <div class="color-card"><div class="swatch" style="background:#80C8E0"></div><div class="color-name">Light Aqua</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E890B8"></div><div class="color-name">Nail Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E8A030"></div><div class="color-name">Golden Yellow</div></div>
+        <div class="color-card"><div class="swatch" style="background:#40B0D0"></div><div class="color-name">Pastel Turquoise</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E84070"></div><div class="color-name">Coral Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F0E020"></div><div class="color-name">Canary</div></div>
+        <div class="color-card"><div class="swatch" style="background:#2040C0"></div><div class="color-name">Medium Blue</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E83050"></div><div class="color-name">Coral Red</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F0D040"></div><div class="color-name">Light Gold</div></div>
+        <div class="color-card"><div class="swatch" style="background:#7060C0"></div><div class="color-name">Pansy</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E82030"></div><div class="color-name">Bright Red</div></div>
+        <div class="color-card"><div class="swatch" style="background:#B0D030"></div><div class="color-name">Pastel Yellow Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#6050D0"></div><div class="color-name">Heliotrope</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E06030"></div><div class="color-name">Orange Red</div></div>
+        <div class="color-card"><div class="swatch" style="background:#80A020"></div><div class="color-name">Yellow Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E07020"></div><div class="color-name">Orange</div></div>
+        <div class="color-card"><div class="swatch" style="background:#30A040"></div><div class="color-name">Apple Green</div></div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="footer-quote">สีที่ใช่ คือพลังที่ดีที่สุดของคุณ</div>
+      <div class="footer-dots"><span></span><span></span><span></span></div>
+      <div class="credit-bar">
+        <div class="credit-line-left"></div>
+        <div class="credit-text">Color Analysis by <span>Deniel</span></div>
+        <div class="credit-line-right"></div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ════════════════ SUMMER ════════════════ -->
+<div id="panel-summer" class="panel">
+  <div class="page">
+    <header class="header">
+      <div class="header-rule-top"></div>
+      <div class="season-label">Personal Color Analysis</div>
+      <h1 class="title">SUMMER</h1>
+      <div class="subtitle-en">Your Signature Palette</div>
+      <div class="subtitle-th">คู่มือสีประจำ Season ของคุณ</div>
+      <div class="header-rule-bot"></div>
+    </header>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Basic Colors</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีพื้นฐาน — เหมาะสำหรับไอเทมหลักในตู้เสื้อผ้า</div>
+      <div class="basic-grid">
+        <div class="color-card"><div class="swatch" style="background:#EEF0F4"></div><div class="color-name">Milky White</div></div>
+        <div class="color-card"><div class="swatch" style="background:#8A9AA8"></div><div class="color-name">Fog</div></div>
+        <div class="color-card"><div class="swatch" style="background:#6A90B8"></div><div class="color-name">Elephant Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#B0A8C0"></div><div class="color-name">Rose Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#A08888"></div><div class="color-name">Brown Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#706070"></div><div class="color-name">Plum Brown</div></div>
+        <div class="color-card"><div class="swatch" style="background:#2A7878"></div><div class="color-name">Mineral Blue</div></div>
+        <div class="color-card"><div class="swatch" style="background:#3A4868"></div><div class="color-name">Grayed Navy</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Assort &amp; Accent</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีที่เข้ากันได้ดีและสีที่ทำให้โดดเด่น</div>
+      <div class="accent-grid">
+        <div class="color-card"><div class="swatch" style="background:#E8C0D8"></div><div class="color-name">Pastel Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F0E880"></div><div class="color-name">Light Yellow</div></div>
+        <div class="color-card"><div class="swatch" style="background:#D8B0C0"></div><div class="color-name">Calm Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C88090"></div><div class="color-name">Rose Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#90C880"></div><div class="color-name">Pastel Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C09098"></div><div class="color-name">Smoky Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C060B0"></div><div class="color-name">Orchid</div></div>
+        <div class="color-card"><div class="swatch" style="background:#28A860"></div><div class="color-name">Light True Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#5A3058"></div><div class="color-name">Azuki Bean</div></div>
+        <div class="color-card"><div class="swatch" style="background:#8848A8"></div><div class="color-name">Soft Fuchsia</div></div>
+        <div class="color-card"><div class="swatch" style="background:#1A7060"></div><div class="color-name">Viridian</div></div>
+        <div class="color-card"><div class="swatch" style="background:#4870C8"></div><div class="color-name">Winkle</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E03068"></div><div class="color-name">Water Melon</div></div>
+        <div class="color-card"><div class="swatch" style="background:#98C8E8"></div><div class="color-name">Hyacinth</div></div>
+        <div class="color-card"><div class="swatch" style="background:#6898C8"></div><div class="color-name">Smoky Blue</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E03878"></div><div class="color-name">Cherry Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#80B8E8"></div><div class="color-name">Pastel Blue</div></div>
+        <div class="color-card"><div class="swatch" style="background:#5848A8"></div><div class="color-name">Amethyst</div></div>
+        <div class="color-card"><div class="swatch" style="background:#902850"></div><div class="color-name">Raspberry</div></div>
+        <div class="color-card"><div class="swatch" style="background:#5888D0"></div><div class="color-name">Forget-me-not Blue</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C8B8D8"></div><div class="color-name">Lavender</div></div>
+        <div class="color-card"><div class="swatch" style="background:#2848B8"></div><div class="color-name">Deep Periwinkle</div></div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="footer-quote">ความงามที่สงบ คือพลังที่ยั่งยืนที่สุด</div>
+      <div class="footer-dots"><span></span><span></span><span></span></div>
+      <div class="credit-bar">
+        <div class="credit-line-left"></div>
+        <div class="credit-text">Color Analysis by <span>Deniel</span></div>
+        <div class="credit-line-right"></div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ════════════════ AUTUMN ════════════════ -->
+<div id="panel-autumn" class="panel">
+  <div class="page">
+    <header class="header">
+      <div class="header-rule-top"></div>
+      <div class="season-label">Personal Color Analysis</div>
+      <h1 class="title">AUTUMN</h1>
+      <div class="subtitle-en">Your Signature Palette</div>
+      <div class="subtitle-th">คู่มือสีประจำ Season ของคุณ</div>
+      <div class="header-rule-bot"></div>
+    </header>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Basic Colors</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีพื้นฐาน — เหมาะสำหรับไอเทมหลักในตู้เสื้อผ้า</div>
+      <div class="basic-grid">
+        <div class="color-card"><div class="swatch" style="background:#EDE8C8"></div><div class="color-name">Oyster White</div></div>
+        <div class="color-card"><div class="swatch" style="background:#D4B880"></div><div class="color-name">Champagne</div></div>
+        <div class="color-card"><div class="swatch" style="background:#B87840"></div><div class="color-name">Cafe-au-lait</div></div>
+        <div class="color-card"><div class="swatch" style="background:#786040"></div><div class="color-name">Coffee Brown</div></div>
+        <div class="color-card"><div class="swatch" style="background:#383828"></div><div class="color-name">Chocolate</div></div>
+        <div class="color-card"><div class="swatch" style="background:#506030"></div><div class="color-name">Olive Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#909070"></div><div class="color-name">Moss Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#203840"></div><div class="color-name">Deep Sea</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Assort &amp; Accent</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีที่เข้ากันได้ดีและสีที่ทำให้โดดเด่น</div>
+      <div class="accent-grid">
+        <div class="color-card"><div class="swatch" style="background:#D89080"></div><div class="color-name">Camoe Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C85020"></div><div class="color-name">Deep Orange</div></div>
+        <div class="color-card"><div class="swatch" style="background:#706050"></div><div class="color-name">Khaki</div></div>
+        <div class="color-card"><div class="swatch" style="background:#D8A090"></div><div class="color-name">Apricot Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C85828"></div><div class="color-name">Pumpkin</div></div>
+        <div class="color-card"><div class="swatch" style="background:#208888"></div><div class="color-name">Turquoise</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C86040"></div><div class="color-name">Salmon</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C89020"></div><div class="color-name">Gold</div></div>
+        <div class="color-card"><div class="swatch" style="background:#207070"></div><div class="color-name">Teal</div></div>
+        <div class="color-card"><div class="swatch" style="background:#A83820"></div><div class="color-name">Red Paprika</div></div>
+        <div class="color-card"><div class="swatch" style="background:#A88020"></div><div class="color-name">Mustard</div></div>
+        <div class="color-card"><div class="swatch" style="background:#185058"></div><div class="color-name">Deep Teal</div></div>
+        <div class="color-card"><div class="swatch" style="background:#A03820"></div><div class="color-name">Dark Tomato Red</div></div>
+        <div class="color-card"><div class="swatch" style="background:#A0A840"></div><div class="color-name">Bamboo</div></div>
+        <div class="color-card"><div class="swatch" style="background:#503878"></div><div class="color-name">Plum</div></div>
+        <div class="color-card"><div class="swatch" style="background:#983020"></div><div class="color-name">Rust</div></div>
+        <div class="color-card"><div class="swatch" style="background:#708038"></div><div class="color-name">Pistachio</div></div>
+        <div class="color-card"><div class="swatch" style="background:#3840A0"></div><div class="color-name">Violet</div></div>
+        <div class="color-card"><div class="swatch" style="background:#601818"></div><div class="color-name">Mahogany</div></div>
+        <div class="color-card"><div class="swatch" style="background:#507030"></div><div class="color-name">Moss Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#B85020"></div><div class="color-name">Terra Cotta</div></div>
+        <div class="color-card"><div class="swatch" style="background:#6A7850"></div><div class="color-name">Grayed Green</div></div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="footer-quote">ความอบอุ่นของคุณคือสิ่งที่ทำให้โลกสวยงาม</div>
+      <div class="footer-dots"><span></span><span></span><span></span></div>
+      <div class="credit-bar">
+        <div class="credit-line-left"></div>
+        <div class="credit-text">Color Analysis by <span>Deniel</span></div>
+        <div class="credit-line-right"></div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ════════════════ WINTER ════════════════ -->
+<div id="panel-winter" class="panel">
+  <div class="page">
+    <header class="header">
+      <div class="header-rule-top"></div>
+      <div class="season-label">Personal Color Analysis</div>
+      <h1 class="title">WINTER</h1>
+      <div class="subtitle-en">Your Signature Palette</div>
+      <div class="subtitle-th">คู่มือสีประจำ Season ของคุณ</div>
+      <div class="header-rule-bot"></div>
+    </header>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Basic Colors</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีพื้นฐาน — เหมาะสำหรับไอเทมหลักในตู้เสื้อผ้า</div>
+      <div class="basic-grid">
+        <div class="color-card"><div class="swatch" style="background:#F5F8FA"></div><div class="color-name">Snow White</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C8D0D8"></div><div class="color-name">Sky Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#282E38"></div><div class="color-name">Charcoal Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#3A6080"></div><div class="color-name">Steel Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#181818"></div><div class="color-name">Black</div></div>
+        <div class="color-card"><div class="swatch" style="background:#D8D4C0"></div><div class="color-name">Taupe</div></div>
+        <div class="color-card"><div class="swatch" style="background:#483830"></div><div class="color-name">Cocoa</div></div>
+        <div class="color-card"><div class="swatch" style="background:#282870"></div><div class="color-name">Indigo</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="sec-line"></div>
+        <div class="section-title">Assort &amp; Accent</div>
+        <div class="sec-line rev"></div>
+      </div>
+      <div class="section-sub">สีที่เข้ากันได้ดีและสีที่ทำให้โดดเด่น</div>
+      <div class="accent-grid">
+        <div class="color-card"><div class="swatch" style="background:#D82880"></div><div class="color-name">Shocking Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F0D000"></div><div class="color-name">Vivid Yellow</div></div>
+        <div class="color-card"><div class="swatch" style="background:#1A2870"></div><div class="color-name">Dark Purplish Blue</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C81870"></div><div class="color-name">Magenta</div></div>
+        <div class="color-card"><div class="swatch" style="background:#209060"></div><div class="color-name">True Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#E0C8D0"></div><div class="color-name">Icy Pink</div></div>
+        <div class="color-card"><div class="swatch" style="background:#9030A0"></div><div class="color-name">Fuchsia</div></div>
+        <div class="color-card"><div class="swatch" style="background:#186848"></div><div class="color-name">Pine Green</div></div>
+        <div class="color-card"><div class="swatch" style="background:#F0F0C0"></div><div class="color-name">Icy Lemon</div></div>
+        <div class="color-card"><div class="swatch" style="background:#5030A8"></div><div class="color-name">Deep Magenta</div></div>
+        <div class="color-card"><div class="swatch" style="background:#00C0E0"></div><div class="color-name">Cyan</div></div>
+        <div class="color-card"><div class="swatch" style="background:#C8E0F0"></div><div class="color-name">Icy Blue</div></div>
+        <div class="color-card"><div class="swatch" style="background:#901840"></div><div class="color-name">Cranberry</div></div>
+        <div class="color-card"><div class="swatch" style="background:#20A8D8"></div><div class="color-name">Hot Turquoise</div></div>
+        <div class="color-card"><div class="swatch" style="background:#D0D0E8"></div><div class="color-name">Icy Violet</div></div>
+        <div class="color-card"><div class="swatch" style="background:#700820"></div><div class="color-name">Wine Red</div></div>
+        <div class="color-card"><div class="swatch" style="background:#1838A8"></div><div class="color-name">Sapphire</div></div>
+        <div class="color-card"><div class="swatch" style="background:#A8B0C0"></div><div class="color-name">Pearl Gray</div></div>
+        <div class="color-card"><div class="swatch" style="background:#200818"></div><div class="color-name">Burgundy</div></div>
+        <div class="color-card"><div class="swatch" style="background:#4830B0"></div><div class="color-name">Heliotrope</div></div>
+        <div class="color-card"><div class="swatch" style="background:#3020A0"></div><div class="color-name">Royal Purple</div></div>
+        <div class="color-card"><div class="swatch" style="background:#2048C0"></div><div class="color-name">Royal Blue</div></div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="footer-quote">ความคมชัดของคุณ คือเสน่ห์ที่ไม่มีใครเทียบได้</div>
+      <div class="footer-dots"><span></span><span></span><span></span></div>
+      <div class="credit-bar">
+        <div class="credit-line-left"></div>
+        <div class="credit-text">Color Analysis by <span>Deniel</span></div>
+        <div class="credit-line-right"></div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+let currentSeason = 'spring';
+
+function switchSeason(season) {
+  currentSeason = season;
+  document.body.className = season;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + season).classList.add('active');
+  document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.btn-' + season).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function downloadImage() {
+  const btn = document.getElementById('dlBtn');
+  if (btn.classList.contains('loading')) return;
+
+  // Loading state
+  btn.classList.add('loading');
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="white"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" opacity=".3"/><path d="M12 2v4a8 8 0 0 1 8 8h4A12 12 0 0 0 12 2z"/></svg>`;
+
+  // Hide FAB and corners
+  document.querySelector('.dl-fab').style.visibility = 'hidden';
+  document.querySelectorAll('.corner').forEach(c => c.style.display = 'none');
+  document.querySelector('.season-nav').style.display = 'none';
+
+  const panel = document.getElementById('panel-' + currentSeason);
+  const page  = panel.querySelector('.page');
+
+  try {
+    const canvas = await html2canvas(page, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#FBF7F0',
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: page.scrollWidth,
+      windowHeight: page.scrollHeight,
+      logging: false
+    });
+
+    const link = document.createElement('a');
+    link.download = `personal-color-${currentSeason}-by-Deniel.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(e) {
+    console.error(e);
+    alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+  }
+
+  // Restore UI
+  document.querySelector('.dl-fab').style.visibility = 'visible';
+  document.querySelectorAll('.corner').forEach(c => c.style.display = '');
+  document.querySelector('.season-nav').style.display = '';
+  btn.classList.remove('loading');
+  btn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 4v-2h14v2H5z"/></svg>`;
+}
+
+// URL hash support
+const hash = window.location.hash.replace('#', '');
+if (['spring','summer','autumn','winter'].includes(hash)) switchSeason(hash);
+</script>
+</body>
+</html>
