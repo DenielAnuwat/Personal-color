@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUMPEI POS — Actiff Consignment System</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body { font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #DDD; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+/**
+ * JUMPEI POS System
+ * ─────────────────────────────────────────────────────────────────
+ * Features:
+ *   • POS for Actiff (ขาย / ตะกร้า / ยืนยันขาย)
+ *   • Dashboard (KPI + bar chart)
+ *   • Stock management (+/- per size)
+ *   • Campaign & pricing management
+ *   • QR Code price checker
+ *   • Sales history
+ *   • Settings (GP, commission, cost)
+ *
+ * Persistence: localStorage
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+const { useState, useEffect, useCallback } = React;
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const IMG = "https://store.jumpei.jp/html/upload/save_image/";
+
+const PRODUCTS = [
+  { code: "JPSV8008BLYP", name: "SexyJUMP Bikini",       full: "SexyJUMP Bikini Type Low-Rise",          img: IMG + "0303150614_69a67a561bb74.jpg" },
+  { code: "JPSV8008LTW2", name: "SexyJUMP LTW",          full: "SexyJUMP LTW Series",                     img: IMG + "0303150245_69a67985627cf.jpg" },
+  { code: "JPSV8043ST01", name: "S.T.A.R.T Collab",      full: "S.T.A.R.T Collaboration",                 img: IMG + "1124194208_692436800db2d.JPG" },
+  { code: "JPSV8003WHGY", name: "BASIC-gray",             full: "BASIC-gray Bikini Type",                  img: IMG + "0303150538_69a67a3207f25.JPG" },
+  { code: "JPSV8016JG1A", name: "SIDE-LOGO JG1A",        full: "SIDE-LOGO JG1A Bikini",                   img: IMG + "1124194741_692437cd5299b.JPG" },
+  { code: "JPSV8086JGNV", name: "JG Navy 2nd Yr",        full: "JG School Color – Navy (2nd Year)",       img: IMG + "0817213515_64de14037f5b7.JPG" },
+  { code: "JGSV8086JGDR", name: "JG Crimson 3rd Yr",     full: "JG School Color – Crimson (3rd Year)",    img: IMG + "0817213421_64de13cdb0d4e.JPG" },
+  { code: "JPSV8086JGDG", name: "JG Green 1st Yr",       full: "JG School Color – Green (1st Year)",      img: IMG + "0817213601_64de1431bc1ac.JPG" },
+];
+
+const SIZES = ["S", "M", "L", "LL"];
+
+const INITIAL_STOCK = {
+  JPSV8008BLYP_S:2, JPSV8008BLYP_M:2, JPSV8008BLYP_L:1, JPSV8008BLYP_LL:2,
+  JPSV8008LTW2_S:4, JPSV8008LTW2_M:3, JPSV8008LTW2_L:2, JPSV8008LTW2_LL:1,
+  JPSV8043ST01_S:2, JPSV8043ST01_M:2, JPSV8043ST01_L:3, JPSV8043ST01_LL:2,
+  JPSV8003WHGY_S:2, JPSV8003WHGY_M:2, JPSV8003WHGY_L:3, JPSV8003WHGY_LL:2,
+  JPSV8016JG1A_S:3, JPSV8016JG1A_M:3, JPSV8016JG1A_L:3, JPSV8016JG1A_LL:1,
+  JPSV8086JGNV_S:3, JPSV8086JGNV_M:1, JPSV8086JGNV_L:2, JPSV8086JGNV_LL:0,
+  JGSV8086JGDR_S:3, JGSV8086JGDR_M:3, JGSV8086JGDR_L:2, JGSV8086JGDR_LL:1,
+  JPSV8086JGDG_S:3, JPSV8086JGDG_M:3, JPSV8086JGDG_L:2, JPSV8086JGDG_LL:2,
+};
+
+const INITIAL_CAMPAIGNS = [
+  { id: "songkran", name: "Songkran 20% OFF", discount: 20, active: false,
+    start: "2026-04-05", end: "2026-04-24", note: "Songkran festival" },
+];
+
+const SETTINGS_DEFAULT = { basePrice: 2090, storeGP: 15, mktgComm: 10, costTHB: 840 };
+
+const SK = { stock: "jp_stock", txns: "jp_txns", camps: "jp_camps", settings: "jp_settings" };
+
+const NAV_ITEMS = [
+  { key: "pos",       icon: "🛒", label: "POS – Actiff"  },
+  { key: "dashboard", icon: "📊", label: "Dashboard"     },
+  { key: "stock",     icon: "📦", label: "Stock"         },
+  { key: "campaigns", icon: "🏷️", label: "Campaigns"     },
+  { key: "qr",        icon: "📱", label: "QR Price"      },
+  { key: "history",   icon: "📋", label: "History"       },
+  { key: "settings",  icon: "⚙️", label: "Settings"      },
+];
+
+// ─── STORAGE HELPERS (localStorage) ──────────────────────────────────────────
+
+function storageGet(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch { return fallback; }
+}
+function storageSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// ─── CALC HELPERS ─────────────────────────────────────────────────────────────
+
+const fmtTHB = (n) => `${(Math.round(n) || 0).toLocaleString()} ฿`;
+const fmtDate = (iso) => new Date(iso).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+const calcNetRevenue = (price, settings) =>
+  Math.round(price * (1 - (settings.storeGP + settings.mktgComm) / 100));
+const calcGrossProfit = (price, settings) =>
+  calcNetRevenue(price, settings) - settings.costTHB;
+
+// ─── STYLES ───────────────────────────────────────────────────────────────────
+
+const css = {
+  app: {
+    display: "flex", height: "100vh", minHeight: 680,
+    fontFamily: "'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif",
+    fontSize: 13, background: "#F7F6F3", color: "#1A1A1A",
+    overflow: "hidden",
+  },
+  sidebar: {
+    width: 180, background: "#1A1A2E", color: "#E8E8F0",
+    display: "flex", flexDirection: "column", flexShrink: 0,
+  },
+  logo: {
+    padding: "18px 16px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)",
+  },
+  logoTitle: { fontSize: 16, fontWeight: 700, letterSpacing: 1, color: "#E8C84A" },
+  logoSub: { fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 2 },
+  navBtn: (active) => ({
+    width: "100%", padding: "10px 16px", display: "flex", alignItems: "center",
+    gap: 10, background: active ? "rgba(232,200,74,0.15)" : "none",
+    border: "none", borderLeft: active ? "3px solid #E8C84A" : "3px solid transparent",
+    cursor: "pointer", fontSize: 12.5,
+    color: active ? "#E8C84A" : "rgba(255,255,255,0.55)",
+    fontWeight: active ? 600 : 400, textAlign: "left", transition: "all 0.15s",
+  }),
+  content: { flex: 1, overflow: "auto", background: "#F7F6F3" },
+  page: { padding: 20, minHeight: "100%" },
+  pageTitle: { fontSize: 18, fontWeight: 700, marginBottom: 16, color: "#1A1A2E" },
+  card: {
+    background: "#FFFFFF", border: "1px solid #EBEBEB",
+    borderRadius: 10, padding: 14,
+  },
+  kpiGrid: { display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 10, marginBottom: 16 },
+  kpi: {
+    background: "#FFF", border: "1px solid #EBEBEB", borderRadius: 10,
+    padding: "12px 14px",
+  },
+  kpiLabel: { fontSize: 11, color: "#888", marginBottom: 4, fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.4 },
+  kpiVal: { fontSize: 22, fontWeight: 700, lineHeight: 1 },
+  btn: (variant = "default") => {
+    const variants = {
+      default: { background: "#F0F0F0", border: "1px solid #E0E0E0", color: "#333" },
+      primary: { background: "#1A1A2E", border: "1px solid #1A1A2E", color: "#E8C84A", fontWeight: 600 },
+      success: { background: "#1B5E20", border: "1px solid #1B5E20", color: "#fff", fontWeight: 600 },
+      danger:  { background: "#FFEBEE", border: "1px solid #FFCDD2", color: "#C62828" },
+      ghost:   { background: "transparent", border: "1px solid #DDD", color: "#555" },
+    };
+    return {
+      padding: "8px 14px", borderRadius: 8, cursor: "pointer",
+      fontSize: 13, fontFamily: "inherit", transition: "opacity 0.15s",
+      ...variants[variant],
+    };
+  },
+  formLabel: { fontSize: 11, fontWeight: 600, color: "#666", marginBottom: 4, display: "block", textTransform: "uppercase", letterSpacing: 0.4 },
+  formInput: {
+    width: "100%", padding: "8px 10px", border: "1px solid #DDD",
+    borderRadius: 8, background: "#FFF", color: "#1A1A1A",
+    fontSize: 13, fontFamily: "inherit", boxSizing: "border-box",
+  },
+  badge: (type = "gray") => {
+    const types = {
+      gray:   { background: "#F0F0F0",  color: "#555"    },
+      green:  { background: "#E8F5E9",  color: "#2E7D32" },
+      amber:  { background: "#FFF8E1",  color: "#F57F17" },
+      red:    { background: "#FFEBEE",  color: "#C62828" },
+      blue:   { background: "#E3F2FD",  color: "#1565C0" },
+      gold:   { background: "#FFF8E1",  color: "#E65100" },
+    };
+    return {
+      display: "inline-block", padding: "2px 8px", borderRadius: 20,
+      fontSize: 11, fontWeight: 600, ...types[type],
+    };
+  },
+  toast: {
+    position: "fixed", top: 16, right: 16, zIndex: 999,
+    background: "#1A1A2E", color: "#E8C84A", padding: "10px 16px",
+    borderRadius: 8, fontSize: 13, fontWeight: 600,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+  },
+};
+
+// ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
+
+function ProductImg({ src, style }) {
+  const [err, setErr] = useState(false);
+  if (err || !src) return (
+    <div style={{ ...style, background: "#F0F0F0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <span style={{ fontSize: 24, opacity: 0.3 }}>👙</span>
+    </div>
+  );
+  return <img src={src} style={{ ...style, objectFit: "cover", display: "block" }} onError={() => setErr(true)} alt="" />;
+}
+
+function Toast({ msg }) {
+  if (!msg) return null;
+  return <div style={css.toast}>{msg}</div>;
+}
+
+function CampaignBanner({ campaign, price, basePrice }) {
+  const style = {
+    display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+    borderRadius: 8, marginBottom: 12, fontSize: 12, fontWeight: 500,
+    ...(campaign
+      ? { background: "#FFF8E1", border: "1px solid #FFD54F", color: "#E65100" }
+      : { background: "#F5F5F5", border: "1px solid #E0E0E0", color: "#888" }),
+  };
+  return (
+    <div style={style}>
+      <span>{campaign ? "🏷️" : "ℹ️"}</span>
+      {campaign
+        ? <span><strong>{campaign.name}</strong> — ราคาขาย {fmtTHB(price)} (ลด {campaign.discount}%)</span>
+        : <span>ราคาปกติ {fmtTHB(price)} — ไม่มีแคมเปญที่เปิดอยู่</span>
+      }
+    </div>
+  );
+}
+
+// ─── PAGE: POS ────────────────────────────────────────────────────────────────
+
+function PagePOS({ stock, cart, setCart, transactions, setTransactions, setStock, settings, campaigns, saveStock, saveTxns, showToast }) {
+  const activeCampaign = campaigns.find(c => c.active) || null;
+  const price = activeCampaign
+    ? Math.round(settings.basePrice * (1 - activeCampaign.discount / 100))
+    : settings.basePrice;
+
+  const cartCount = cart.reduce((a, i) => a + i.qty, 0);
+  const cartTotal = cart.reduce((a, i) => a + i.price * i.qty, 0);
+
+  function addToCart(code, size) {
+    const qty = stock[`${code}_${size}`] || 0;
+    if (!qty) { showToast("Out of stock"); return; }
+    const ex = cart.find(i => i.code === code && i.size === size);
+    if (ex) {
+      if (ex.qty >= qty) { showToast("สต๊อกไม่พอ"); return; }
+      setCart(cart.map(i => i.code === code && i.size === size ? { ...i, qty: i.qty + 1 } : i));
+    } else {
+      const p = PRODUCTS.find(p => p.code === code);
+      setCart([...cart, { code, size, qty: 1, name: p.name, full: p.full, img: p.img, price }]);
+    }
+  }
+
+  function removeFromCart(idx) { setCart(cart.filter((_, i) => i !== idx)); }
+
+  function checkout() {
+    if (!cart.length) { showToast("ตะกร้าว่าง"); return; }
+    const cnt = cartCount;
+    const txn = {
+      id: "T" + Date.now(),
+      ts: new Date().toISOString(),
+      items: [...cart],
+      total: cartTotal,
+      sellPrice: price,
+      netRevenue: calcNetRevenue(price, settings) * cnt,
+      grossProfit: calcGrossProfit(price, settings) * cnt,
+      campaign: activeCampaign?.name || null,
+      discount: activeCampaign?.discount || 0,
+    };
+    const newStock = { ...stock };
+    cart.forEach(item => {
+      const k = `${item.code}_${item.size}`;
+      newStock[k] = Math.max(0, (newStock[k] || 0) - item.qty);
+    });
+    setStock(newStock);
+    setTransactions([txn, ...transactions]);
+    setCart([]);
+    saveStock(newStock);
+    saveTxns([txn, ...transactions]);
+    showToast(`บันทึกการขาย ${cart.length} รายการ ✓`);
+  }
+
+  return (
+    <div style={css.page}>
+      <CampaignBanner campaign={activeCampaign} price={price} basePrice={settings.basePrice} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: 12, height: 560 }}>
+        {/* Product Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8, alignContent: "start", overflowY: "auto", paddingRight: 2 }}>
+          {PRODUCTS.map(p => {
+            const total = SIZES.reduce((a, s) => a + (stock[`${p.code}_${s}`] || 0), 0);
+            return (
+              <div key={p.code} style={{ ...css.card, padding: 0, overflow: "hidden" }}>
+                <div style={{ position: "relative" }}>
+                  <ProductImg src={p.img} style={{ width: "100%", height: 100 }} />
+                  <span style={{ ...css.badge(total === 0 ? "red" : total <= 3 ? "amber" : "green"), position: "absolute", top: 6, right: 6 }}>
+                    {total}
+                  </span>
+                </div>
+                <div style={{ padding: 10 }}>
+                  <div style={{ fontSize: 9, color: "#AAA", fontFamily: "monospace", marginBottom: 2 }}>{p.code}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, lineHeight: 1.3, height: 30, overflow: "hidden" }}>{p.full}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#1A1A2E" }}>{fmtTHB(price)}</span>
+                    {activeCampaign && <span style={{ fontSize: 10, color: "#BBB", textDecoration: "line-through" }}>{fmtTHB(settings.basePrice)}</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {SIZES.map(s => {
+                      const q = stock[`${p.code}_${s}`] || 0;
+                      return (
+                        <button key={s} onClick={() => addToCart(p.code, s)} disabled={!q}
+                          style={{ padding: "3px 7px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+                            border: `1px solid ${q ? "#1A1A2E" : "#DDD"}`,
+                            background: q ? "#1A1A2E" : "#F5F5F5",
+                            color: q ? "#E8C84A" : "#CCC",
+                            cursor: q ? "pointer" : "not-allowed",
+                          }}>
+                          {s} {q > 0 && <span style={{ fontSize: 9, opacity: 0.7 }}>{q}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Cart Panel */}
+        <div style={{ ...css.card, display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid #EEE", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+            🛒 ตะกร้า
+            {cartCount > 0 && <span style={css.badge("blue")}>{cartCount}</span>}
+          </div>
+
+          <div style={{ flex: 1, overflow: "auto", padding: "6px 10px" }}>
+            {cart.length === 0
+              ? <div style={{ color: "#BBB", fontSize: 12, textAlign: "center", padding: 20, fontStyle: "italic" }}>
+                  ยังไม่มีสินค้า<br /><span style={{ fontSize: 10 }}>คลิกไซส์เพื่อเพิ่ม</span>
+                </div>
+              : cart.map((item, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: "1px solid #F5F5F5", alignItems: "center" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 6, overflow: "hidden", flexShrink: 0 }}>
+                      <ProductImg src={item.img} style={{ width: 38, height: 38 }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.name} <span style={css.badge("blue")}>{item.size}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#888" }}>×{item.qty} = {fmtTHB(item.price * item.qty)}</div>
+                    </div>
+                    <button onClick={() => removeFromCart(i)} style={{ ...css.btn("ghost"), padding: "2px 7px", fontSize: 12, color: "#E53935" }}>✕</button>
+                  </div>
+                ))
+            }
+          </div>
+
+          <div style={{ padding: "10px 14px", borderTop: "1px solid #EEE" }}>
+            {activeCampaign && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#888", marginBottom: 2 }}>
+                  <span>ราคาปกติ</span><span>{fmtTHB(settings.basePrice * cartCount)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#C62828", marginBottom: 2 }}>
+                  <span>ลด {activeCampaign.discount}%</span>
+                  <span>-{fmtTHB((settings.basePrice - price) * cartCount)}</span>
+                </div>
+              </>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 15, paddingTop: 8, borderTop: "1px solid #EEE" }}>
+              <span>ยอดรวม</span><span style={{ color: "#1A1A2E" }}>{fmtTHB(cartTotal)}</span>
+            </div>
+            {cart.length > 0 && (
+              <div style={{ fontSize: 10, color: "#888", marginTop: 4 }}>
+                Net JUMP: {fmtTHB(calcNetRevenue(price, settings) * cartCount)} · กำไร: {fmtTHB(calcGrossProfit(price, settings) * cartCount)}
+              </div>
+            )}
+            <button onClick={checkout} style={{ ...css.btn("success"), width: "100%", marginTop: 8 }}>
+              ✓ ยืนยันการขาย
+            </button>
+            {cart.length > 0 && (
+              <button onClick={() => setCart([])} style={{ ...css.btn("ghost"), width: "100%", marginTop: 4, fontSize: 11 }}>
+                ล้างตะกร้า
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAGE: DASHBOARD ──────────────────────────────────────────────────────────
+
+function PageDashboard({ stock, transactions, campaigns, settings }) {
+  const sold   = transactions.reduce((a, t) => a + t.items.reduce((b, i) => b + i.qty, 0), 0);
+  const rev    = transactions.reduce((a, t) => a + t.total, 0);
+  const net    = transactions.reduce((a, t) => a + (t.netRevenue || 0), 0);
+  const profit = transactions.reduce((a, t) => a + (t.grossProfit || 0), 0);
+  const totalStock = Object.values(stock).reduce((a, v) => a + v, 0);
+
+  const byProduct = PRODUCTS.map(p => ({
+    p,
+    sold: transactions.reduce((a, t) => a + t.items.filter(i => i.code === p.code).reduce((b, i) => b + i.qty, 0), 0)
+  })).filter(x => x.sold > 0);
+  const maxSold = Math.max(...byProduct.map(x => x.sold), 1);
+
+  const kpis = [
+    { label: "ขายแล้ว",      val: `${sold} ชิ้น`,    color: "#1565C0" },
+    { label: "ยอดขายรวม",    val: fmtTHB(rev),       color: "#2E7D32" },
+    { label: "Net (JUMP)",   val: fmtTHB(net),       color: "#1565C0" },
+    { label: "กำไรรวม",      val: fmtTHB(profit),    color: profit >= 0 ? "#2E7D32" : "#C62828" },
+  ];
+
+  return (
+    <div style={css.page}>
+      <div style={css.pageTitle}>Dashboard</div>
+      <div style={css.kpiGrid}>
+        {kpis.map(k => (
+          <div key={k.label} style={css.kpi}>
+            <div style={css.kpiLabel}>{k.label}</div>
+            <div style={{ ...css.kpiVal, color: k.color, fontSize: 18 }}>{k.val}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={css.card}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "#888", marginBottom: 12 }}>ยอดขายแยกสินค้า</div>
+          {byProduct.length === 0
+            ? <div style={{ color: "#CCC", fontSize: 12, textAlign: "center", padding: 16 }}>ยังไม่มีข้อมูลการขาย</div>
+            : byProduct.map(x => (
+                <div key={x.p.code} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "#F0F0F0" }}>
+                    <ProductImg src={x.p.img} style={{ width: 30, height: 30 }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, color: "#888", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.p.name}</div>
+                    <div style={{ height: 8, background: "#F0F0F0", borderRadius: 4, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${Math.round(x.sold / maxSold * 100)}%`, background: "#1A1A2E", borderRadius: 4 }} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, width: 22, textAlign: "right", flexShrink: 0 }}>{x.sold}</div>
+                </div>
+              ))
+          }
+        </div>
+
+        <div style={css.card}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "#888", marginBottom: 12 }}>รายการล่าสุด</div>
+          {transactions.slice(0, 5).length === 0
+            ? <div style={{ color: "#CCC", fontSize: 12, textAlign: "center", padding: 16 }}>ยังไม่มีรายการ</div>
+            : transactions.slice(0, 5).map(t => (
+                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F5F5F5" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t.items.map(i => `${i.name} ${i.size}`).join(", ")}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#888" }}>{fmtDate(t.ts)}{t.campaign ? ` · ${t.campaign}` : ""}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{fmtTHB(t.total)}</div>
+                    <div style={{ fontSize: 10, color: "#2E7D32" }}>Net {fmtTHB(t.netRevenue)}</div>
+                  </div>
+                </div>
+              ))
+          }
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginTop: 12 }}>
+        <div style={css.kpi}>
+          <div style={css.kpiLabel}>สต๊อกคงเหลือ</div>
+          <div style={{ ...css.kpiVal, fontSize: 18 }}>{totalStock} <span style={{ fontSize: 12, fontWeight: 400 }}>ชิ้น</span></div>
+        </div>
+        <div style={css.kpi}>
+          <div style={css.kpiLabel}>Gross Margin</div>
+          <div style={{ ...css.kpiVal, fontSize: 18 }}>{net ? Math.round(profit / net * 100) : 0}%</div>
+        </div>
+        <div style={css.kpi}>
+          <div style={css.kpiLabel}>แคมเปญ</div>
+          <div style={{ marginTop: 4 }}>
+            {campaigns.find(c => c.active)
+              ? <span style={css.badge("gold")}>{campaigns.find(c => c.active).name}</span>
+              : <span style={{ color: "#CCC", fontSize: 13 }}>—</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAGE: STOCK ──────────────────────────────────────────────────────────────
+
+function PageStock({ stock, setStock, saveStock }) {
+  const adj = (code, size, delta) => {
+    const k = `${code}_${size}`;
+    const next = { ...stock, [k]: Math.max(0, (stock[k] || 0) + delta) };
+    setStock(next); saveStock(next);
+  };
+  const totalAll = Object.values(stock).reduce((a, v) => a + v, 0);
+  return (
+    <div style={css.page}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={css.pageTitle}>Stock</div>
+        <button onClick={() => { if (confirm("Reset stock to initial values?")) { setStock(INITIAL_STOCK); saveStock(INITIAL_STOCK); } }}
+          style={css.btn("ghost")}>Reset</button>
+      </div>
+      <div style={{ ...css.card, overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid #F0F0F0" }}>
+              <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, color: "#888", fontSize: 11 }}></th>
+              <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, color: "#888", fontSize: 11 }}>สินค้า</th>
+              {SIZES.map(s => <th key={s} style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, color: "#888", fontSize: 11 }}>{s}</th>)}
+              <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, color: "#888", fontSize: 11 }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {PRODUCTS.map(p => {
+              const total = SIZES.reduce((a, s) => a + (stock[`${p.code}_${s}`] || 0), 0);
+              return (
+                <tr key={p.code} style={{ borderBottom: "1px solid #F5F5F5" }}>
+                  <td style={{ padding: "8px 10px" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 6, overflow: "hidden", background: "#F5F5F5" }}>
+                      <ProductImg src={p.img} style={{ width: 36, height: 36 }} />
+                    </div>
+                  </td>
+                  <td style={{ padding: "8px 10px" }}>
+                    <div style={{ fontSize: 9, color: "#AAA", fontFamily: "monospace" }}>{p.code}</div>
+                    <div style={{ fontWeight: 600 }}>{p.name}</div>
+                  </td>
+                  {SIZES.map(s => {
+                    const q = stock[`${p.code}_${s}`] || 0;
+                    return (
+                      <td key={s} style={{ padding: "6px 10px", textAlign: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                          <button onClick={() => adj(p.code, s, -1)} style={{ ...css.btn("ghost"), padding: "1px 6px", fontSize: 14 }}>−</button>
+                          <span style={{ minWidth: 22, textAlign: "center", fontWeight: 700, color: q === 0 ? "#CCC" : q <= 2 ? "#F57F17" : "#1A1A2E" }}>{q}</span>
+                          <button onClick={() => adj(p.code, s, +1)} style={{ ...css.btn("ghost"), padding: "1px 6px", fontSize: 14 }}>+</button>
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                    <span style={css.badge(total === 0 ? "red" : total <= 5 ? "amber" : "green")}>{total}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ background: "#F9F9F9", borderTop: "2px solid #F0F0F0" }}>
+              <td colSpan={2} style={{ padding: "8px 10px", fontWeight: 700, fontSize: 12 }}>รวมทั้งหมด</td>
+              {SIZES.map(s => (
+                <td key={s} style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700 }}>
+                  {PRODUCTS.reduce((a, p) => a + (stock[`${p.code}_${s}`] || 0), 0)}
+                </td>
+              ))}
+              <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700 }}>{totalAll}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAGE: CAMPAIGNS ──────────────────────────────────────────────────────────
+
+function PageCampaigns({ campaigns, setCampaigns, saveCampaigns, settings, showToast }) {
+  const [form, setForm] = useState({ name: "", discount: "", start: "", end: "", note: "" });
+  const price = (() => { const c = campaigns.find(c => c.active); return c ? Math.round(settings.basePrice * (1 - c.discount / 100)) : settings.basePrice; })();
+
+  const toggle = (i) => {
+    const next = campaigns.map((c, j) => ({ ...c, active: j === i ? !c.active : false }));
+    setCampaigns(next); saveCampaigns(next);
+    showToast(next[i].active ? `เปิดแคมเปญ: ${next[i].name}` : "ปิดแคมเปญแล้ว");
+  };
+  const del = (i) => { if (confirm("ลบแคมเปญ?")) { const n = campaigns.filter((_, j) => j !== i); setCampaigns(n); saveCampaigns(n); } };
+  const create = () => {
+    if (!form.name || !form.discount) { showToast("กรุณากรอกชื่อและ % ลด"); return; }
+    const n = [...campaigns, { id: "c" + Date.now(), name: form.name, discount: +form.discount, active: false, start: form.start, end: form.end, note: form.note }];
+    setCampaigns(n); saveCampaigns(n); setForm({ name: "", discount: "", start: "", end: "", note: "" }); showToast("สร้างแคมเปญแล้ว");
+  };
+  const previewPrice = form.discount ? Math.round(settings.basePrice * (1 - +form.discount / 100)) : null;
+
+  return (
+    <div style={css.page}>
+      <div style={css.pageTitle}>Campaigns & Pricing</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 270px", gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "#888", marginBottom: 10 }}>แคมเปญทั้งหมด</div>
+          {campaigns.length === 0 && <div style={{ color: "#CCC", fontSize: 12, padding: 16 }}>ยังไม่มีแคมเปญ</div>}
+          {campaigns.map((c, i) => {
+            const cp = Math.round(settings.basePrice * (1 - c.discount / 100));
+            return (
+              <div key={c.id} style={{ ...css.card, marginBottom: 8 }}>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700 }}>{c.name}</span>
+                      <span style={css.badge(c.active ? "gold" : "gray")}>{c.active ? "ACTIVE" : "inactive"}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#666" }}>ลด {c.discount}% · ราคาขาย {fmtTHB(cp)}</div>
+                    <div style={{ fontSize: 11, color: "#AAA" }}>{c.start || "–"} → {c.end || "–"}{c.note ? ` · ${c.note}` : ""}</div>
+                    {c.active && <div style={{ fontSize: 11, marginTop: 5, color: "#555" }}>
+                      Net JUMP: <strong>{fmtTHB(calcNetRevenue(cp, settings))}</strong> · กำไร: <strong>{fmtTHB(calcGrossProfit(cp, settings))}</strong>
+                    </div>}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                    <button onClick={() => toggle(i)} style={css.btn(c.active ? "danger" : "primary")}>{c.active ? "ปิดใช้" : "เปิดใช้"}</button>
+                    <button onClick={() => del(i)} style={{ ...css.btn("ghost"), color: "#C62828" }}>ลบ</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "#888", marginBottom: 10 }}>สร้างแคมเปญใหม่</div>
+          <div style={css.card}>
+            {[["name", "ชื่อแคมเปญ", "text", "เช่น Summer Sale"], ["discount", "ส่วนลด (%)", "number", "20"]].map(([k, l, t, ph]) => (
+              <div key={k} style={{ marginBottom: 10 }}>
+                <label style={css.formLabel}>{l}</label>
+                <input style={css.formInput} type={t} placeholder={ph} value={form[k]}
+                  onChange={e => setForm({ ...form, [k]: e.target.value })} />
+              </div>
+            ))}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+              {[["start", "วันเริ่ม", "date"], ["end", "วันสิ้นสุด", "date"]].map(([k, l, t]) => (
+                <div key={k}>
+                  <label style={css.formLabel}>{l}</label>
+                  <input style={css.formInput} type={t} value={form[k]} onChange={e => setForm({ ...form, [k]: e.target.value })} />
+                </div>
+              ))}
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label style={css.formLabel}>หมายเหตุ</label>
+              <input style={css.formInput} placeholder="รายละเอียด" value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} />
+            </div>
+            {previewPrice && <div style={{ fontSize: 12, color: "#666", marginBottom: 8, padding: "6px 10px", background: "#F9F9F9", borderRadius: 6 }}>
+              ราคาขาย: <strong>{fmtTHB(previewPrice)}</strong> · Net: <strong>{fmtTHB(calcNetRevenue(previewPrice, settings))}</strong> · กำไร: <strong>{fmtTHB(calcGrossProfit(previewPrice, settings))}</strong>
+            </div>}
+            <button onClick={create} style={{ ...css.btn("primary"), width: "100%" }}>+ สร้างแคมเปญ</button>
+          </div>
+
+          <div style={{ ...css.card, marginTop: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "#888", marginBottom: 8 }}>ราคาใช้งานตอนนี้</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#1A1A2E" }}>{fmtTHB(price)}</div>
+            <div style={{ fontSize: 11, color: "#888", marginTop: 6, lineHeight: 1.8 }}>
+              Net JUMP: {fmtTHB(calcNetRevenue(price, settings))}<br />
+              กำไร/ชิ้น: {fmtTHB(calcGrossProfit(price, settings))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAGE: QR CODE ────────────────────────────────────────────────────────────
+
+function PageQR({ campaigns, settings, stock }) {
+  const activeCampaign = campaigns.find(c => c.active) || null;
+  const price = activeCampaign ? Math.round(settings.basePrice * (1 - activeCampaign.discount / 100)) : settings.basePrice;
+  return (
+    <div style={css.page}>
+      <div style={css.pageTitle}>QR Code – ตรวจสอบราคา</div>
+      <CampaignBanner campaign={activeCampaign} price={price} basePrice={settings.basePrice} />
+      <div style={{ fontSize: 12, color: "#888", marginBottom: 14 }}>
+        ร้าน Actiff สแกน QR เพื่อเช็คราคาปัจจุบัน · อัปเดตอัตโนมัติเมื่อเปลี่ยนแคมเปญ
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 10 }}>
+        {PRODUCTS.map(p => {
+          const total = SIZES.reduce((a, s) => a + (stock[`${p.code}_${s}`] || 0), 0);
+          const qrData = encodeURIComponent(`JUMPEI|${p.code}|${p.name}|${price}THB${activeCampaign ? "|" + activeCampaign.name : ""}`);
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&color=1A1A2E&data=${qrData}`;
+          return (
+            <div key={p.code} style={{ ...css.card, padding: 0, overflow: "hidden", textAlign: "center" }}>
+              <ProductImg src={p.img} style={{ width: "100%", height: 75 }} />
+              <div style={{ padding: "10px 8px" }}>
+                <div style={{ fontSize: 9, color: "#AAA", fontFamily: "monospace", marginBottom: 2 }}>{p.code}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{p.name}</div>
+                <img src={qrUrl} style={{ width: 100, height: 100, margin: "0 auto 8px", display: "block" }} alt="QR" />
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#1A1A2E" }}>{fmtTHB(price)}</div>
+                {activeCampaign && <>
+                  <div style={{ fontSize: 10, color: "#CCC", textDecoration: "line-through" }}>{fmtTHB(settings.basePrice)}</div>
+                  <span style={{ ...css.badge("gold"), marginTop: 4 }}>-{activeCampaign.discount}%</span>
+                </>}
+                <div style={{ marginTop: 6 }}>
+                  <span style={css.badge(total === 0 ? "red" : total <= 3 ? "amber" : "green")}>{total} pcs</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── PAGE: HISTORY ────────────────────────────────────────────────────────────
+
+function PageHistory({ transactions, setTransactions, saveTxns }) {
+  const total = transactions.reduce((a, t) => a + t.total, 0);
+  const totalNet = transactions.reduce((a, t) => a + (t.netRevenue || 0), 0);
+  return (
+    <div style={css.page}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={css.pageTitle}>Sales History ({transactions.length})</div>
+        {transactions.length > 0 && <button onClick={() => { if (confirm("ล้างประวัติทั้งหมด?")) { setTransactions([]); saveTxns([]); } }} style={{ ...css.btn("danger") }}>ล้างทั้งหมด</button>}
+      </div>
+      <div style={{ ...css.card, overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 640 }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid #F0F0F0" }}>
+              {["ID", "วันเวลา", "สินค้า", "แคมเปญ", "ยอดขาย", "Net JUMP", ""].map((h, i) => (
+                <th key={i} style={{ padding: "8px 10px", textAlign: i >= 4 ? "right" : "left", fontWeight: 700, color: "#888", fontSize: 11 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.length === 0
+              ? <tr><td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#CCC", fontStyle: "italic" }}>ยังไม่มีรายการขาย</td></tr>
+              : transactions.map((t, i) => (
+                  <tr key={t.id} style={{ borderBottom: "1px solid #F5F5F5" }}>
+                    <td style={{ padding: "8px 10px", fontSize: 10, fontFamily: "monospace", color: "#AAA" }}>{t.id.slice(-6)}</td>
+                    <td style={{ padding: "8px 10px" }}>{fmtDate(t.ts)}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                        {t.items.map((item, j) => (
+                          <span key={j} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, background: "#F5F5F5", padding: "2px 7px", borderRadius: 20 }}>
+                            <span style={{ width: 16, height: 16, borderRadius: 3, overflow: "hidden", display: "inline-block", background: "#EEE", flexShrink: 0 }}>
+                              <ProductImg src={item.img || PRODUCTS.find(p => p.code === item.code)?.img} style={{ width: 16, height: 16 }} />
+                            </span>
+                            {item.name} {item.size}×{item.qty}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={{ padding: "8px 10px" }}>{t.campaign ? <span style={css.badge("gold")}>{t.campaign}</span> : "—"}</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700 }}>{fmtTHB(t.total)}</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", color: "#2E7D32" }}>{fmtTHB(t.netRevenue)}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <button onClick={() => { if (confirm("ลบรายการนี้?")) { const n = transactions.filter((_, j) => j !== i); setTransactions(n); saveTxns(n); } }}
+                        style={{ ...css.btn("ghost"), padding: "2px 8px", fontSize: 11, color: "#C62828" }}>ลบ</button>
+                    </td>
+                  </tr>
+                ))
+            }
+          </tbody>
+          {transactions.length > 0 && (
+            <tfoot>
+              <tr style={{ background: "#F9F9F9", borderTop: "2px solid #F0F0F0" }}>
+                <td colSpan={4} style={{ padding: "8px 10px", fontWeight: 700, fontSize: 12 }}>รวม</td>
+                <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700 }}>{fmtTHB(total)}</td>
+                <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, color: "#2E7D32" }}>{fmtTHB(totalNet)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAGE: SETTINGS ───────────────────────────────────────────────────────────
+
+function PageSettings({ settings, setSettings, saveSettings }) {
+  const [local, setLocal] = useState({ ...settings });
+  const price = local.basePrice;
+  const fields = [
+    ["basePrice", "ราคาเต็ม (THB)", "number"],
+    ["storeGP",   "Actiff Store GP (%)", "number"],
+    ["mktgComm",  "Marketing Commission (%)", "number"],
+    ["costTHB",   "ต้นทุนสินค้า/ชิ้น (THB)", "number"],
+  ];
+  const save = () => { setSettings(local); saveSettings(local); };
+  const netR = calcNetRevenue(price, local);
+  const gp   = calcGrossProfit(price, local);
+
+  return (
+    <div style={css.page}>
+      <div style={css.pageTitle}>Settings</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={css.card}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "#888", marginBottom: 12 }}>ราคาและค่าธรรมเนียม</div>
+          {fields.map(([k, l, t]) => (
+            <div key={k} style={{ marginBottom: 10 }}>
+              <label style={css.formLabel}>{l}</label>
+              <input style={css.formInput} type={t} value={local[k]}
+                onChange={e => setLocal({ ...local, [k]: +e.target.value })} />
+            </div>
+          ))}
+          <button onClick={save} style={{ ...css.btn("primary"), width: "100%", marginTop: 4 }}>บันทึก</button>
+        </div>
+
+        <div>
+          <div style={css.card}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "#888", marginBottom: 12 }}>วิเคราะห์กำไร — ราคา {fmtTHB(price)}</div>
+            {[
+              ["ราคาขาย", fmtTHB(price), "#1A1A2E", true],
+              [`Actiff Store GP (${local.storeGP}%)`, `-${fmtTHB(Math.round(price * local.storeGP / 100))}`, "#C62828", false],
+              [`Marketing (${local.mktgComm}%)`, `-${fmtTHB(Math.round(price * local.mktgComm / 100))}`, "#C62828", false],
+              ["Net (JUMP)", fmtTHB(netR), "#1565C0", true],
+              ["ต้นทุน/ชิ้น", `-${fmtTHB(local.costTHB)}`, "#C62828", false],
+              ["Gross Profit", `${fmtTHB(gp)} (${Math.round(gp / netR * 100)}%)`, gp >= 0 ? "#2E7D32" : "#C62828", true],
+            ].map(([l, v, c, bold]) => (
+              <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F5F5F5", fontSize: 13 }}>
+                <span style={{ color: "#666" }}>{l}</span>
+                <span style={{ fontWeight: bold ? 700 : 400, color: c }}>{v}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ ...css.card, marginTop: 10, background: "#1A1A2E", color: "#E8E8F0" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "#E8C84A", marginBottom: 8 }}>อ้างอิง Songkran 2026</div>
+            <div style={{ fontSize: 11, lineHeight: 2, color: "rgba(255,255,255,0.55)" }}>
+              ขาย 31 ชิ้น · ยอดรวม 51,832 ฿<br />
+              GP 15% + Comm 10% = 25% deduction<br />
+              Net JUMP: 1,254 ฿/ชิ้น<br />
+              Gross Profit: 414 ฿ (24.7%)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+
+function App() {
+  const [tab, setTab]               = useState("pos");
+  const [stock, setStock]           = useState(() => storageGet(SK.stock, INITIAL_STOCK));
+  const [transactions, setTxns]     = useState(() => storageGet(SK.txns, []));
+  const [campaigns, setCampaigns]   = useState(() => storageGet(SK.camps, INITIAL_CAMPAIGNS));
+  const [settings, setSettings]     = useState(() => storageGet(SK.settings, SETTINGS_DEFAULT));
+  const [cart, setCart]             = useState([]);
+  const [toast, setToast]           = useState(null);
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const saveStock    = useCallback((v) => storageSet(SK.stock, v), []);
+  const saveTxns     = useCallback((v) => storageSet(SK.txns, v), []);
+  const saveCampaigns= useCallback((v) => storageSet(SK.camps, v), []);
+  const saveSettings = useCallback((v) => storageSet(SK.settings, v), []);
+
+  const pageProps = { stock, setStock, transactions, setTransactions: setTxns, campaigns, setCampaigns, settings, setSettings, cart, setCart, saveStock, saveTxns, saveCampaigns, saveSettings, showToast };
+
+  return (
+    <div style={css.app}>
+      <Toast msg={toast} />
+
+      {/* Sidebar */}
+      <div style={css.sidebar}>
+        <div style={css.logo}>
+          <div style={css.logoTitle}>JUMPEI POS</div>
+          <div style={css.logoSub}>Actiff consignment system</div>
+        </div>
+        <nav style={{ flex: 1, padding: "8px 0", overflowY: "auto" }}>
+          {NAV_ITEMS.map(n => (
+            <button key={n.key} onClick={() => setTab(n.key)} style={css.navBtn(tab === n.key)}>
+              <span style={{ fontSize: 14 }}>{n.icon}</span>{n.label}
+            </button>
+          ))}
+        </nav>
+        <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 10, color: "rgba(255,255,255,0.25)" }}>
+          v2.0 · with images
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={css.content}>
+        {tab === "pos"       && <PagePOS       {...pageProps} />}
+        {tab === "dashboard" && <PageDashboard {...pageProps} />}
+        {tab === "stock"     && <PageStock     {...pageProps} />}
+        {tab === "campaigns" && <PageCampaigns {...pageProps} />}
+        {tab === "qr"        && <PageQR        {...pageProps} />}
+        {tab === "history"   && <PageHistory   {...pageProps} />}
+        {tab === "settings"  && <PageSettings  {...pageProps} />}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
